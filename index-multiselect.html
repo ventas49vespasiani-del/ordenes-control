@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Órdenes Pendientes</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #000000;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-bottom: 2px solid #0f3460;
+            padding: 50px 0;
+            margin-bottom: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00d4ff;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+        }
+
+        header p {
+            color: #a0aec0;
+            font-size: 1.1rem;
+        }
+
+        /* Carga de archivo */
+        .upload-section {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px dashed #00d4ff;
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.1);
+        }
+
+        .upload-section:hover {
+            background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+            border-color: #00ff88;
+            box-shadow: 0 0 40px rgba(0, 255, 136, 0.2);
+            transform: scale(1.02);
+        }
+
+        .upload-section h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+
+        .upload-section p {
+            color: #a0aec0;
+            margin-bottom: 25px;
+            font-size: 1.1rem;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.1rem;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .upload-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.6);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Mensajes */
+        .error {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #f87171;
+        }
+
+        .success {
+            background: #1f2937;
+            color: #86efac;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #4ade80;
+        }
+
+        /* Filtros */
+        .filters {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .filters h3 {
+            color: #00d4ff;
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .filter-section {
+            margin-bottom: 30px;
+        }
+
+        .filter-section h4 {
+            color: #00ff88;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .checkboxes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 212, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid #0f3460;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: #00d4ff;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: #00d4ff;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            color: #e2e8f0;
+            margin: 0;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-buttons button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+
+        .btn-clear {
+            background: #0f3460;
+            color: #a0aec0;
+            border: 1px solid #0f3460;
+        }
+
+        .btn-clear:hover {
+            background: #16213e;
+            color: #e2e8f0;
+            border-color: #00d4ff;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .btn-export:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        /* Métricas */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s;
+        }
+
+        .metric:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .metric h4 {
+            color: #a0aec0;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metric .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .metric.costo .value {
+            color: #00ff88;
+        }
+
+        .metric.dias .value {
+            color: #ffd700;
+        }
+
+        /* Gráficos */
+        .charts-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .chart-box {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .chart-box h3 {
+            color: #00d4ff;
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+        }
+
+        .chart-box canvas {
+            max-height: 300px;
+        }
+
+        /* Asesores */
+        .asesores-section {
+            margin-bottom: 40px;
+        }
+
+        .asesores-section h2 {
+            color: #00d4ff;
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .asesor-card {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .asesor-card:hover {
+            border-color: #00d4ff;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+            transform: translateX(10px);
+        }
+
+        .asesor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .asesor-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .asesor-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .stat-label {
+            color: #a0aec0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .stat.costo .stat-value {
+            color: #00ff88;
+        }
+
+        .stat.dias .stat-value {
+            color: #ffd700;
+        }
+
+        .toggle-icon {
+            color: #00d4ff;
+            font-size: 1.5rem;
+            transition: transform 0.3s;
+        }
+
+        .asesor-card.expanded .toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .asesor-ordenes {
+            display: none;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid #0f3460;
+        }
+
+        .asesor-card.expanded .asesor-ordenes {
+            display: block;
+        }
+
+        .ordenes-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 10px;
+        }
+
+        .ordenes-table thead {
+            background: #0f3460;
+        }
+
+        .ordenes-table th {
+            padding: 15px;
+            text-align: left;
+            color: #00d4ff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        .ordenes-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #0f3460;
+            color: #e2e8f0;
+        }
+
+        .ordenes-table tbody tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .number {
+            color: #00ff88;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-alert {
+            background: rgba(255, 59, 59, 0.2);
+            color: #ff3b3b;
+            border: 1px solid #ff3b3b;
+        }
+
+        .badge-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .badge-info {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+        }
+
+        .btn-export-asesor {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+
+        .btn-export-asesor:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        /* Órdenes antiguas */
+        .antiguas-section {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .antiguas-section h3 {
+            color: #ff3b3b;
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+        }
+
+        .antiguas-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .antiguas-table th {
+            background: #0f3460;
+            padding: 15px;
+            color: #ff3b3b;
+            font-weight: 600;
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .antiguas-table td {
+            padding: 15px;
+            border-bottom: 1px solid #0f3460;
+            color: #e2e8f0;
+        }
+
+        .antiguas-table tbody tr:hover {
+            background: rgba(255, 59, 59, 0.05);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: #a0aec0;
+        }
+
+        .empty-state h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 2rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #64748b;
+            border-top: 1px solid #0f3460;
+            margin-top: 60px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .charts-section {
+                grid-template-columns: 1fr;
+            }
+
+            .checkboxes-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .ordenes-table {
+                font-size: 0.85rem;
+            }
+
+            .ordenes-table th, .ordenes-table td {
+                padding: 8px;
+            }
+
+            .asesor-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>📊 CONTROL DE ÓRDENES PENDIENTES</h1>
+            <p>Tablero Profesional - Carga tu Excel y analiza en tiempo real</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Carga de archivo -->
+        <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+            <h3>📁 Cargar Excel</h3>
+            <p>Haz clic aquí o arrastra tu archivo Excel (.xlsx, .xls, .csv)</p>
+            <button class="upload-btn">Seleccionar archivo</button>
+            <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" />
+        </div>
+
+        <!-- Mensajes -->
+        <div id="message"></div>
+
+        <!-- Contenido dinámico -->
+        <div id="content" style="display: none;">
+            <!-- Filtros -->
+            <div class="filters">
+                <h3>🔍 Filtros Avanzados</h3>
+                
+                <div class="filter-section">
+                    <h4>Sucursales</h4>
+                    <div class="checkboxes-grid" id="sucursalesCheckboxes"></div>
+                </div>
+
+                <div class="filter-section">
+                    <h4>Corredores / Asesores</h4>
+                    <div class="checkboxes-grid" id="corredoresCheckboxes"></div>
+                </div>
+
+                <div class="filter-section">
+                    <h4>Días Abierta</h4>
+                    <div class="checkboxes-grid">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dias-todos" value="" checked onchange="aplicarFiltros()">
+                            <label for="dias-todos">Todos</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dias-30" value="0-30" onchange="aplicarFiltros()">
+                            <label for="dias-30">Hasta 30 días</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dias-60" value="31-60" onchange="aplicarFiltros()">
+                            <label for="dias-60">31 a 60 días</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dias-90" value="61-90" onchange="aplicarFiltros()">
+                            <label for="dias-90">61 a 90 días</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="dias-90plus" value="90+" onchange="aplicarFiltros()">
+                            <label for="dias-90plus">Más de 90 días</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-buttons">
+                    <button class="btn-clear" onclick="limpiarFiltros()">🔄 Limpiar Todo</button>
+                    <button class="btn-export" onclick="exportarTodoExcel()">📥 Exportar Seleccionados</button>
+                </div>
+            </div>
+
+            <!-- Métricas -->
+            <div class="metrics">
+                <div class="metric">
+                    <h4>📦 Total Órdenes</h4>
+                    <div class="value" id="metricTotal">0</div>
+                </div>
+                <div class="metric costo">
+                    <h4>💰 Costo Total</h4>
+                    <div class="value" id="metricCosto">$0,00</div>
+                </div>
+                <div class="metric">
+                    <h4>📈 Venta Total</h4>
+                    <div class="value" id="metricVenta">$0,00</div>
+                </div>
+                <div class="metric dias">
+                    <h4>⏱️ Días Promedio</h4>
+                    <div class="value" id="metricDias">0</div>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="charts-section">
+                <div class="chart-box">
+                    <h3>📊 Costo por Sucursal</h3>
+                    <canvas id="chartSucursal"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>👥 Órdenes por Corredor</h3>
+                    <canvas id="chartAsesores"></canvas>
+                </div>
+            </div>
+
+            <!-- Órdenes más antiguas -->
+            <div class="antiguas-section">
+                <h3>⚠️ ÓRDENES MÁS ANTIGUAS (Críticas)</h3>
+                <table class="antiguas-table">
+                    <thead>
+                        <tr>
+                            <th>Días</th>
+                            <th>N° Orden</th>
+                            <th>Corredor</th>
+                            <th>Sucursal</th>
+                            <th class="text-right">Costo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablasAntiguasBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Asesores -->
+            <div class="asesores-section">
+                <h2>👥 ÓRDENES POR CORREDOR</h2>
+                <div id="asesoresContainer"></div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state">
+            <h2>👆 Carga tu archivo Excel</h2>
+            <p>Arrastra aquí o haz clic en la zona de carga para comenzar</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>Control de Órdenes Pendientes • Todos los datos se procesan localmente en tu navegador</p>
+    </footer>
+
+    <script>
+        let datosOriginales = [];
+        let datosFiltrados = [];
+        let charts = {};
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        let headerRow = 0;
+                        if (json[0][0] && typeof json[0][0] === 'string' && json[0][0].toLowerCase().includes('control')) {
+                            headerRow = 1;
+                        }
+                        
+                        const headers = json[headerRow];
+                        const dataRows = json.slice(headerRow + 1);
+                        
+                        datosOriginales = dataRows
+                            .filter(row => row && row.length > 0 && row[0])
+                            .map(row => {
+                                const obj = {};
+                                headers.forEach((header, idx) => {
+                                    let value = row[idx];
+                                    if (header.toLowerCase().includes('costo') || 
+                                        header.toLowerCase().includes('venta') || 
+                                        header.toLowerCase().includes('días') ||
+                                        header.toLowerCase().includes('dias') ||
+                                        header.toLowerCase().includes('orden')) {
+                                        if (typeof value === 'string') {
+                                            value = parseFloat(value.replace(/[^0-9.-]/g, '')) || 0;
+                                        } else if (typeof value === 'number') {
+                                            value = value;
+                                        } else {
+                                            value = 0;
+                                        }
+                                    }
+                                    obj[header] = value;
+                                });
+                                return obj;
+                            });
+
+                        mostrarMensaje('✅ Excel cargado: ' + datosOriginales.length + ' órdenes', 'success');
+                        inicializarFiltros();
+                        aplicarFiltros();
+                        document.getElementById('content').style.display = 'block';
+                        document.getElementById('emptyState').style.display = 'none';
+                    } catch (error) {
+                        mostrarMensaje('❌ Error: ' + error.message, 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function mostrarMensaje(texto, tipo) {
+            const msg = document.getElementById('message');
+            msg.innerHTML = `<div class="${tipo}">${texto}</div>`;
+            setTimeout(() => msg.innerHTML = '', 3000);
+        }
+
+        function obtenerNombreColumna(columnas, buscar) {
+            return columnas.find(col => col.toLowerCase().includes(buscar.toLowerCase())) || '';
+        }
+
+        function inicializarFiltros() {
+            if (datosOriginales.length === 0) return;
+            
+            const headers = Object.keys(datosOriginales[0]);
+            const colSucursal = obtenerNombreColumna(headers, 'sucursal');
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            
+            const sucursales = [...new Set(datosOriginales.map(d => d[colSucursal]).filter(Boolean))].sort();
+            const asesores = [...new Set(datosOriginales.map(d => d[colAsesor]).filter(Boolean))].sort();
+
+            // Crear checkboxes de sucursales
+            let htmlSucursales = '';
+            sucursales.forEach(s => {
+                htmlSucursales += `<div class="checkbox-item">
+                    <input type="checkbox" class="checkbox-sucursal" value="${s}" checked onchange="aplicarFiltros()">
+                    <label>${s}</label>
+                </div>`;
+            });
+            document.getElementById('sucursalesCheckboxes').innerHTML = htmlSucursales;
+
+            // Crear checkboxes de corredores
+            let htmlCorredores = '';
+            asesores.forEach(a => {
+                htmlCorredores += `<div class="checkbox-item">
+                    <input type="checkbox" class="checkbox-corredor" value="${a}" checked onchange="aplicarFiltros()">
+                    <label>${a}</label>
+                </div>`;
+            });
+            document.getElementById('corredoresCheckboxes').innerHTML = htmlCorredores;
+        }
+
+        function obtenerChecksSeleccionados(clase) {
+            const checkboxes = document.querySelectorAll(`.${clase}:checked`);
+            return Array.from(checkboxes).map(c => c.value);
+        }
+
+        function aplicarFiltros() {
+            if (datosOriginales.length === 0) return;
+            
+            const headers = Object.keys(datosOriginales[0]);
+            const colSucursal = obtenerNombreColumna(headers, 'sucursal');
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            const colDias = obtenerNombreColumna(headers, 'dias');
+            
+            const sucursalesSeleccionadas = obtenerChecksSeleccionados('checkbox-sucursal');
+            const corredoresSeleccionados = obtenerChecksSeleccionados('checkbox-corredor');
+            const diasSeleccionados = obtenerChecksSeleccionados('checkbox-dias').filter(d => d !== '');
+
+            datosFiltrados = datosOriginales.filter(d => {
+                let cumple = true;
+                
+                if (sucursalesSeleccionadas.length > 0 && !sucursalesSeleccionadas.includes(d[colSucursal])) {
+                    cumple = false;
+                }
+                
+                if (corredoresSeleccionados.length > 0 && !corredoresSeleccionados.includes(d[colAsesor])) {
+                    cumple = false;
+                }
+                
+                if (diasSeleccionados.length > 0) {
+                    const diasVal = parseFloat(d[colDias]) || 0;
+                    const cumpleDias = diasSeleccionados.some(rango => {
+                        if (rango === '90+') return diasVal > 90;
+                        const [min, max] = rango.split('-').map(Number);
+                        return diasVal >= min && diasVal <= max;
+                    });
+                    if (!cumpleDias) cumple = false;
+                }
+                
+                return cumple;
+            });
+
+            actualizarMetricas();
+            actualizarGraficos();
+            actualizarAsesores();
+            actualizarAntiguos();
+        }
+
+        function actualizarMetricas() {
+            if (datosOriginales.length === 0) return;
+            
+            const headers = Object.keys(datosFiltrados[0] || datosOriginales[0]);
+            const colCosto = obtenerNombreColumna(headers, 'costo');
+            const colVenta = obtenerNombreColumna(headers, 'venta');
+            const colDias = obtenerNombreColumna(headers, 'dias');
+            
+            const total = datosFiltrados.length;
+            const costo = datosFiltrados.reduce((s, d) => s + (parseFloat(d[colCosto]) || 0), 0);
+            const venta = datosFiltrados.reduce((s, d) => s + (parseFloat(d[colVenta]) || 0), 0);
+            const diasProm = total > 0 ? Math.round(datosFiltrados.reduce((s, d) => s + (parseFloat(d[colDias]) || 0), 0) / total) : 0;
+
+            document.getElementById('metricTotal').textContent = total;
+            document.getElementById('metricCosto').textContent = '$' + formatNumero(costo);
+            document.getElementById('metricVenta').textContent = '$' + formatNumero(venta);
+            document.getElementById('metricDias').textContent = diasProm;
+        }
+
+        function actualizarGraficos() {
+            if (datosOriginales.length === 0 || datosFiltrados.length === 0) return;
+            
+            const headers = Object.keys(datosFiltrados[0] || datosOriginales[0]);
+            const colSucursal = obtenerNombreColumna(headers, 'sucursal');
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            const colCosto = obtenerNombreColumna(headers, 'costo');
+
+            // Gráfico por Sucursal
+            const porSucursal = {};
+            datosFiltrados.forEach(d => {
+                const suc = d[colSucursal];
+                porSucursal[suc] = (porSucursal[suc] || 0) + (parseFloat(d[colCosto]) || 0);
+            });
+
+            const ctx1 = document.getElementById('chartSucursal').getContext('2d');
+            if (charts.sucursal) charts.sucursal.destroy();
+            charts.sucursal = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(porSucursal),
+                    datasets: [{
+                        data: Object.values(porSucursal),
+                        backgroundColor: ['#00d4ff', '#00ff88', '#ffd700', '#ff3b3b', '#ff6ec7'],
+                        borderColor: '#1a1a2e',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0', padding: 15 }
+                        }
+                    }
+                }
+            });
+
+            // Gráfico por Asesor
+            const porAsesor = {};
+            datosFiltrados.forEach(d => {
+                const as = d[colAsesor];
+                porAsesor[as] = (porAsesor[as] || 0) + 1;
+            });
+
+            const ctx2 = document.getElementById('chartAsesores').getContext('2d');
+            if (charts.asesores) charts.asesores.destroy();
+            charts.asesores = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(porAsesor).sort((a, b) => porAsesor[b] - porAsesor[a]),
+                    datasets: [{
+                        label: 'Órdenes',
+                        data: Object.keys(porAsesor).sort((a, b) => porAsesor[b] - porAsesor[a]).map(k => porAsesor[k]),
+                        backgroundColor: '#00d4ff',
+                        borderColor: '#0f3460',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { labels: { color: '#e2e8f0' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#a0aec0' }, grid: { color: '#0f3460' } },
+                        y: { ticks: { color: '#a0aec0' } }
+                    }
+                }
+            });
+        }
+
+        function actualizarAsesores() {
+            if (datosOriginales.length === 0) return;
+            
+            const headers = Object.keys(datosFiltrados[0] || datosOriginales[0]);
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            const colCosto = obtenerNombreColumna(headers, 'costo');
+            const colVenta = obtenerNombreColumna(headers, 'venta');
+            const colDias = obtenerNombreColumna(headers, 'dias');
+            const colFecha = obtenerNombreColumna(headers, 'fecha');
+            const colOrden = obtenerNombreColumna(headers, 'orden');
+            const colCargo = obtenerNombreColumna(headers, 'cargo');
+            const colImputado = obtenerNombreColumna(headers, 'imputado');
+
+            const asesores = {};
+            datosFiltrados.forEach(d => {
+                const as = d[colAsesor];
+                if (!asesores[as]) asesores[as] = [];
+                asesores[as].push(d);
+            });
+
+            let html = '';
+            Object.entries(asesores).sort((a, b) => 
+                b[1].reduce((s, o) => s + (parseFloat(o[colCosto]) || 0), 0) -
+                a[1].reduce((s, o) => s + (parseFloat(o[colCosto]) || 0), 0)
+            ).forEach(([asesor, ordenes]) => {
+                const totalCosto = ordenes.reduce((s, o) => s + (parseFloat(o[colCosto]) || 0), 0);
+                const totalVenta = ordenes.reduce((s, o) => s + (parseFloat(o[colVenta]) || 0), 0);
+                const diasProm = Math.round(ordenes.reduce((s, o) => s + (parseFloat(o[colDias]) || 0), 0) / ordenes.length);
+
+                html += `<div class="asesor-card" onclick="toggleAsesor(this)">
+                    <div class="asesor-header">
+                        <div class="asesor-name">${asesor}</div>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="asesor-stats">
+                        <div class="stat">
+                            <div class="stat-label">Órdenes</div>
+                            <div class="stat-value">${ordenes.length}</div>
+                        </div>
+                        <div class="stat costo">
+                            <div class="stat-label">Costo Total</div>
+                            <div class="stat-value">$${formatNumero(totalCosto)}</div>
+                        </div>
+                        <div class="stat">
+                            <div class="stat-label">Venta Total</div>
+                            <div class="stat-value">$${formatNumero(totalVenta)}</div>
+                        </div>
+                        <div class="stat dias">
+                            <div class="stat-label">Días Promedio</div>
+                            <div class="stat-value">${diasProm}</div>
+                        </div>
+                    </div>
+                    <div class="asesor-ordenes">
+                        <table class="ordenes-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>N° Orden</th>
+                                    <th>Cargo</th>
+                                    <th>Imputado</th>
+                                    <th class="text-right">Costo</th>
+                                    <th class="text-right">Días</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${ordenes.map(o => `<tr>
+                                    <td>${o[colFecha] ? (new Date(o[colFecha])).toLocaleDateString('es-AR') : ''}</td>
+                                    <td>${o[colOrden]}</td>
+                                    <td>${o[colCargo]}</td>
+                                    <td>${o[colImputado]}</td>
+                                    <td class="text-right number">$${formatNumero(o[colCosto])}</td>
+                                    <td class="text-right"><span class="badge ${parseFloat(o[colDias]) > 250 ? 'badge-alert' : parseFloat(o[colDias]) > 180 ? 'badge-warning' : 'badge-info'}">${o[colDias]}</span></td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                        <button class="btn-export-asesor" onclick="exportarAsesor('${asesor}', event)">📥 Exportar Informe</button>
+                    </div>
+                </div>`;
+            });
+
+            document.getElementById('asesoresContainer').innerHTML = html;
+        }
+
+        function actualizarAntiguos() {
+            if (datosOriginales.length === 0) return;
+            
+            const headers = Object.keys(datosFiltrados[0] || datosOriginales[0]);
+            const colDias = obtenerNombreColumna(headers, 'dias');
+            const colOrden = obtenerNombreColumna(headers, 'orden');
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            const colSucursal = obtenerNombreColumna(headers, 'sucursal');
+            const colCosto = obtenerNombreColumna(headers, 'costo');
+
+            let html = '';
+            [...datosFiltrados].sort((a, b) => (parseFloat(b[colDias]) || 0) - (parseFloat(a[colDias]) || 0)).slice(0, 15).forEach(d => {
+                const diasVal = parseFloat(d[colDias]) || 0;
+                html += `<tr>
+                    <td><span class="badge ${diasVal > 250 ? 'badge-alert' : diasVal > 180 ? 'badge-warning' : 'badge-info'}">${diasVal} días</span></td>
+                    <td><strong>${d[colOrden]}</strong></td>
+                    <td>${d[colAsesor]}</td>
+                    <td>${d[colSucursal]}</td>
+                    <td class="text-right number">$${formatNumero(d[colCosto])}</td>
+                </tr>`;
+            });
+
+            document.getElementById('tablasAntiguasBody').innerHTML = html;
+        }
+
+        function toggleAsesor(element) {
+            element.classList.toggle('expanded');
+        }
+
+        function limpiarFiltros() {
+            document.querySelectorAll('.checkbox-sucursal, .checkbox-corredor').forEach(cb => cb.checked = true);
+            document.querySelectorAll('#dias-todos').forEach(cb => cb.checked = true);
+            document.querySelectorAll('#dias-30, #dias-60, #dias-90, #dias-90plus').forEach(cb => cb.checked = false);
+            aplicarFiltros();
+        }
+
+        function formatNumero(num) {
+            return num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function exportarAsesor(asesor, event) {
+            event.stopPropagation();
+            const headers = Object.keys(datosFiltrados[0] || datosOriginales[0]);
+            const colAsesor = obtenerNombreColumna(headers, 'asesores') || obtenerNombreColumna(headers, 'asesor');
+            
+            const datosAsesor = datosFiltrados.filter(d => d[colAsesor] === asesor);
+            const ws = XLSX.utils.json_to_sheet(datosAsesor);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, asesor);
+            XLSX.writeFile(wb, `informe_${asesor}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            mostrarMensaje(`✅ Informe de ${asesor} exportado`, 'success');
+        }
+
+        function exportarTodoExcel() {
+            const ws = XLSX.utils.json_to_sheet(datosFiltrados);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Órdenes');
+            XLSX.writeFile(wb, `ordenes_completas_${new Date().toISOString().split('T')[0]}.xlsx`);
+            mostrarMensaje('✅ Todos los datos exportados', 'success');
+        }
+
+        // Drag & drop
+        document.body.addEventListener('dragover', e => {
+            e.preventDefault();
+            document.querySelector('.upload-section').style.borderColor = '#00ff88';
+        });
+
+        document.body.addEventListener('dragleave', () => {
+            document.querySelector('.upload-section').style.borderColor = '#00d4ff';
+        });
+
+        document.body.addEventListener('drop', e => {
+            e.preventDefault();
+            document.querySelector('.upload-section').style.borderColor = '#00d4ff';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                const event = new Event('change');
+                document.getElementById('fileInput').dispatchEvent(event);
+            }
+        });
+    </script>
+</body>
+</html>
